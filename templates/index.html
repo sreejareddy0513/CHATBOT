@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Chat</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- jQuery -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+  <style>
+    body { background:#f4f6f8; }
+    .chat-card { max-width: 780px; margin: 24px auto; }
+    #chat-body { height: 65vh; overflow-y: auto; background:#fff; }
+    .chat-message {
+      max-width: 75%;
+      padding: .5rem .75rem;
+      border-radius: .5rem;
+      margin: .35rem 0;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .chat-message.user { margin-left:auto; background:#0d6efd; color:#fff; }
+    .chat-message.bot  { margin-right:auto; background:#e9ecef; color:#111; }
+    .typing { font-size:.9rem; color:#6c757d; }
+  </style>
+</head>
+<body>
+
+  <div class="card shadow chat-card">
+    <div class="card-header bg-primary text-white fw-semibold">
+      Simple AI Chat
+    </div>
+
+    <div id="chat-body" class="card-body">
+      <div class="chat-message bot">
+        Hello! Ask me anything.
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <div class="input-group">
+        <input id="message-input" type="text" class="form-control" placeholder="Type your message here...">
+        <button id="send-button" class="btn btn-primary">Send</button>
+      </div>
+      <small class="text-muted">Press Enter to send</small>
+    </div>
+  </div>
+
+  <script>
+    const $body = $('#chat-body');
+    const $input = $('#message-input');
+
+    function addMessage(text, who){
+      const div = $('<div/>').addClass('chat-message ' + who).text(text);
+      $body.append(div);
+      $body.scrollTop($body[0].scrollHeight);
+    }
+
+    function sendMessage(){
+      const userMessage = $input.val().trim();
+      if(!userMessage) return;
+
+      addMessage(userMessage, 'user');
+      $input.val('');
+
+      // simple typing indicator
+      const $typing = $('<div/>').addClass('chat-message bot typing').text('Typing…');
+      $body.append($typing);
+      $body.scrollTop($body[0].scrollHeight);
+
+      $.ajax({
+        url: '/chat',
+        method: 'POST',
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        data: JSON.stringify({ message: userMessage })
+      })
+      .done(function(res){
+        $typing.remove();
+        addMessage(res && res.response ? res.response : 'No response', 'bot');
+      })
+      .fail(function(xhr){
+        $typing.remove();
+        const msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'Request failed';
+        addMessage('Error: ' + msg, 'bot');
+      });
+    }
+
+    // Send on button click or Enter
+    $('#send-button').on('click', sendMessage);
+    $input.on('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
